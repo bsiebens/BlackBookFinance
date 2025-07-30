@@ -4,12 +4,13 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from decimal import Decimal
+
 class Commodity(models.Model):
     """
     A commodity represents something that can be bought or sold, including currencies, stocks, ...
 
     :ivar name: The name of the commodity.
-    :type name: str
+    :type name: Str
     :ivar code: A code for the commodity (e.g., EUR, USD, META, ...)
     :type code: str
     """
@@ -31,7 +32,7 @@ class Commodity(models.Model):
         
         :param commodity: The commodity to convert to
         :type commodity: str | Commodity
-        :return: The conversion rate for the given commodity
+        :return: The conversion rate for converting this commodity into the given commodity
         :rtype: decimal.Decimal
         """
         
@@ -92,7 +93,7 @@ class Price(models.Model):
     :ivar date: The date of the price entry.
     :type date: datetime.date
     :ivar price: The price value of the commodity.
-    :type price: decimal.Decimal
+    :type price: Decimal.Decimal
     :ivar commodity: The commodity for which the price is applicable.
     :type commodity: Commodity
     :ivar unit: The unit of measurement for the price value.
