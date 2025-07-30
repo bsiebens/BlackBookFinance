@@ -20,11 +20,16 @@ class CommodityTestCase(TestCase):
 
     def test_convert_to_direct(self):
         Price.objects.create(date=timezone.now().date(), price=Decimal(1.23), commodity=self.eur, unit=self.usd)
+
         self.assertEqual(self.eur.convert_to(self.usd), Decimal("1.23"))
         self.assertEqual(self.usd.convert_to(self.eur), 1 / Decimal("1.23"))
 
     def test_convert_to_indirect(self):
-        raise NotImplementedError
+        Price.objects.create(date=timezone.now().date(), price=Decimal(1.23), commodity=self.eur, unit=self.gbp)
+        Price.objects.create(date=timezone.now().date(), price=Decimal(1.50), commodity=self.gbp, unit=self.usd)
+
+        self.assertEqual(self.eur.convert_to(self.usd), Decimal("1.23") * Decimal("1.50"))
+        self.assertEqual(self.usd.convert_to(self.eur), (1 / (Decimal("1.50")) * (1 / Decimal("1.23"))))
 
     def test_convert_to_with_str(self):
         raise NotImplementedError
