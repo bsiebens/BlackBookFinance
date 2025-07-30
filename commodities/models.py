@@ -17,13 +17,32 @@ class Commodity(models.Model):
     :type code: str
     """
 
+    class CommodityType(models.TextChoices):
+        CURRENCY = "currency", _("Currency")
+        STOCK = "stock", _("Stock")
+        FUND = "fund", _("Fund")
+        WARRANT = "warrant", _("Warrant")
+        ASSET = "asset", _("Asset")
+        OTHER = "other", _("Other")
+
+    class BackendOptions(models.TextChoices):
+        YAHOO = "yahoo", _("Yahoo Finance")
+        CUSTOM = "custom", _("Custom")
+
     name = models.CharField(_("name"), max_length=100)
-    code = models.CharField(_("code"), max_length=10)
+    code = models.CharField(_("code"), max_length=10, unique=True)  # Add unique constraint
+
+    commodity_type = models.CharField(_("commodity type"), choices=CommodityType.choices, default=CommodityType.OTHER, max_length=10)
+    backend = models.CharField(_("backend"), choices=BackendOptions.choices, default=BackendOptions.YAHOO, max_length=10, blank=True, null=True)
+    auto_update = models.BooleanField(_("auto update"), default=False)
+    website = models.URLField(_("website"), blank=True, null=True)
+    xpath_selector = models.CharField(_("xpath selector"), max_length=255, blank=True, null=True)
 
     class Meta:
         verbose_name = _("commodity")
         verbose_name_plural = _("commodities")
         ordering = ["name", "code"]
+        constraints = [models.UniqueConstraint(fields=["name", "code"], name="unique_commodity")]
 
     def __str__(self):
         return f"{self.name} ({self.code})"
@@ -52,12 +71,15 @@ class Commodity(models.Model):
         latest_dates = Price.objects.values("commodity", "unit").annotate(latest_date=Max("date"))
 
         # Step 2: fetch most recent prices
-        for entry in latest_dates:
-            from_unit = entry["commodity"]
-            to_unit = entry["unit"]
-            date = entry["latest_date"]
+        # Replace the inefficient loop with a single query:
+        latest_prices = Price.objects.filter(
+            commodity__in=[entry["commodity"] for entry in latest_dates],
+            unit__in=[entry["unit"] for entry in latest_dates],
+            date__in=[entry["latest_date"] for entry in latest_dates],
+        ).select_related("commodity", "unit")
 
-            price = Price.objects.filter(commodity=from_unit, unit=to_unit, date=date).latest()
+        # Build the graph more efficiently
+        for price in latest_prices:
             graph[price.commodity].append(price.unit)
             prices_lookup[(price.commodity, price.unit)] = price.price
 
@@ -120,6 +142,10 @@ class Price(models.Model):
         verbose_name_plural = _("prices")
         ordering = ["-date"]
         get_latest_by = "date"
+        constraints = [
+            models.UniqueConstraint(fields=["commodity", "unit", "date"], name="unique_price_per_day"),
+            models.CheckConstraint(check=models.Q(price__gt=0), name="positive_price"),
+        ]
 
     def __str__(self):
         return f"{self.commodity}: {self.price} {self.unit} @ {self.date}"
