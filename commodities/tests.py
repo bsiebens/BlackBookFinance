@@ -32,10 +32,16 @@ class CommodityTestCase(TestCase):
         self.assertEqual(self.usd.convert_to(self.eur), (1 / (Decimal("1.50")) * (1 / Decimal("1.23"))))
 
     def test_convert_to_with_str(self):
-        raise NotImplementedError
+        Price.objects.create(date=timezone.now().date(), price=Decimal(1.23), commodity=self.eur, unit=self.usd)
+
+        self.assertEqual(self.eur.convert_to("USD"), Decimal("1.23"))
+        self.assertEqual(self.usd.convert_to("EUR"), 1 / Decimal("1.23"))
 
     def test_convert_to_with_str_not_existing(self):
-        raise NotImplementedError
+        self.assertEqual(self.eur.convert_to("CHF"), Decimal("1"))
 
     def test_convert_to_circular(self):
-        raise NotImplementedError
+        Price.objects.create(date=timezone.now().date(), price=Decimal(1.23), commodity=self.eur, unit=self.usd)
+        Price.objects.create(date=timezone.now().date(), price=(1 / Decimal(1.23)), commodity=self.usd, unit=self.eur)
+
+        self.assertEqual(self.eur.convert_to(self.gbp), Decimal("1"))
