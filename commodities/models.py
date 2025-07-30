@@ -16,73 +16,74 @@ class Commodity(models.Model):
     :ivar code: A code for the commodity (e.g., EUR, USD, META, ...)
     :type code: str
     """
-    
+
     name = models.CharField(_("name"), max_length=100)
     code = models.CharField(_("code"), max_length=10)
-    
+
     class Meta:
         verbose_name = _("commodity")
         verbose_name_plural = _("commodities")
         ordering = ["name", "code"]
-    
+
     def __str__(self):
         return f"{self.name} ({self.code})"
-    
+
     def convert_to(self, commodity: "str | Commodity") -> Decimal:
         """
         Converts this commodity into the given commodity.
-        
+
         :param commodity: The commodity to convert to
         :type commodity: str | Commodity
         :return: The conversion rate for converting this commodity into the given commodity
         :rtype: decimal.Decimal
         """
-        
+
         if not isinstance(commodity, Commodity):
             try:
                 commodity = Commodity.objects.get(code=commodity)
-            
+
             except Commodity.DoesNotExist:
                 return Decimal(1.0)
-            
+
         graph = defaultdict(list)
         prices_lookup = {}
-        
+
         # Step 1: find the latest dates
         latest_dates = Price.objects.values("commodity", "unit").annotate(latest_date=Max("date"))
-        
+
         # Step 2: fetch most recent prices
         for entry in latest_dates:
-            commodity = entry["commodity"]
-            unit = entry["unit"]
+            from_unit = entry["commodity"]
+            to_unit = entry["unit"]
             date = entry["latest_date"]
-            
-            price = Price.objects.filter(commodity=commodity, unit=unit, date=date).latest()
+
+            price = Price.objects.filter(commodity=from_unit, unit=to_unit, date=date).latest()
             graph[price.commodity].append(price.unit)
             prices_lookup[(price.commodity, price.unit)] = price.price
-            
+
             if price.price != Decimal(0.0):
                 graph[price.unit].append(price.commodity)
                 prices_lookup[(price.unit, price.commodity)] = Decimal(1.0) / price.price
-                
+
         # Step 3: breadth-first search (BFS)
         queue = deque([(self, [self], Decimal(1.0))])
         visited = set()
-        
+
         while queue:
             current, path, factor = queue.popleft()
             if current == commodity:
                 return factor
-            
+
             visited.add(current)
-            
+
             for neighbor in graph[current]:
                 if neighbor not in visited:
                     new_factor = factor * prices_lookup[(current, neighbor)]
                     queue.append((neighbor, path + [neighbor], new_factor))
-                    
+
         return Decimal(1.0)
-    
+
+
 class Price(models.Model):
     """
     Represents the pricing details of a specific commodity.
@@ -105,19 +106,20 @@ class Price(models.Model):
     :ivar updated: Timestamp of the last update to the price entry.
     :type updated: datetime.datetime
     """
-    
+
     date = models.DateField(_("date"), default=timezone.now)
     price = models.DecimalField(_("price"), max_digits=20, decimal_places=5)
     commodity = models.ForeignKey(Commodity, on_delete=models.CASCADE, related_name="prices", verbose_name=_("commodity"))
     unit = models.ForeignKey(Commodity, on_delete=models.CASCADE, verbose_name=_("unit"), help_text=_("The unit of this price."))
-    
+
     created = models.DateTimeField(_("created"), auto_now_add=True)
     updated = models.DateTimeField(_("updated"), auto_now=True)
-    
+
     class Meta:
         verbose_name = _("price")
         verbose_name_plural = _("prices")
         ordering = ["-date"]
-        
+        get_latest_by = "date"
+
     def __str__(self):
         return f"{self.commodity}: {self.price} {self.unit} @ {self.date}"
