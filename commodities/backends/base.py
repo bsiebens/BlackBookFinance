@@ -41,7 +41,7 @@ class BaseBackend(object):
         :return: A dictionary mapping commodity codes to corresponding Commodity objects.
         :rtype: dict[str, Commodity]
         """
-        
+
         return {
             commodity.code: commodity
             for commodity in Commodity.objects.filter(commodity_type__in=self.capabilities, backend=self.backend, auto_update=True)
