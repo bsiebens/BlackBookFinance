@@ -17,11 +17,12 @@ class CommodityAdmin(admin.ModelAdmin):
 
 @admin.register(Price)
 class PriceAdmin(admin.ModelAdmin):
-    list_display = ["date", "commodity", "price", "unit", "created", "updated"]
+    list_display = ["date", "commodity", "price", "unit", "backend", "created", "updated"]
     date_hierarchy = "date"
     ordering = ["-date"]
-    list_filter = ["commodity", "unit"]
+    list_filter = ["commodity", "unit", "backend"]
     search_fields = ["commodity__name", "commodity__code", "unit__name", "unit__code"]
     fieldsets = [
-        ["GENERAL INFORMATION", {"fields": ["date", "commodity", "price", "unit"], "classes": ["wide"]}],
+        ["GENERAL INFORMATION", {"fields": ["date", "commodity", "price", "unit", "backend"], "classes": ["wide"]}],
     ]
+    readonly_fields = ["backend"]

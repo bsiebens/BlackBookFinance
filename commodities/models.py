@@ -25,7 +25,7 @@ class Commodity(models.Model):
         ASSET = "asset", _("Asset")
         OTHER = "other", _("Other")
 
-    class BackendOptions(models.TextChoices):
+    class Backend(models.TextChoices):
         YAHOO = "yahoo", _("Yahoo Finance")
         CUSTOM = "custom", _("Custom")
 
@@ -33,7 +33,7 @@ class Commodity(models.Model):
     code = models.CharField(_("code"), max_length=10, unique=True)  # Add unique constraint
 
     commodity_type = models.CharField(_("commodity type"), choices=CommodityType.choices, default=CommodityType.OTHER, max_length=10)
-    backend = models.CharField(_("backend"), choices=BackendOptions.choices, default=BackendOptions.YAHOO, max_length=10, blank=True, null=True)
+    backend = models.CharField(_("backend"), choices=Backend.choices, default=Backend.YAHOO, max_length=10, blank=True, null=True)
     auto_update = models.BooleanField(_("auto update"), default=False)
     website = models.URLField(_("website"), blank=True, null=True)
     xpath_selector = models.CharField(_("xpath selector"), max_length=255, blank=True, null=True)
@@ -133,6 +133,7 @@ class Price(models.Model):
     price = models.DecimalField(_("price"), max_digits=20, decimal_places=5)
     commodity = models.ForeignKey(Commodity, on_delete=models.CASCADE, related_name="prices", verbose_name=_("commodity"))
     unit = models.ForeignKey(Commodity, on_delete=models.CASCADE, verbose_name=_("unit"), help_text=_("The unit of this price."))
+    backend = models.CharField(_("backend"), max_length=250, default="Manual")
 
     created = models.DateTimeField(_("created"), auto_now_add=True)
     updated = models.DateTimeField(_("updated"), auto_now=True)
@@ -143,7 +144,7 @@ class Price(models.Model):
         ordering = ["-date"]
         get_latest_by = "date"
         constraints = [
-            models.UniqueConstraint(fields=["commodity", "unit", "date"], name="unique_price_per_day"),
+            models.UniqueConstraint(fields=["commodity", "unit", "date", "backend"], name="unique_price_per_day"),
             models.CheckConstraint(check=models.Q(price__gt=0), name="positive_price"),
         ]
 
