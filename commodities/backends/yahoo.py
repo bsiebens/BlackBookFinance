@@ -15,13 +15,8 @@ class YahooFinanceBackend(BaseBackend):
     capabilities = [Commodity.CommodityType.CURRENCY]
     backend = Commodity.Backend.YAHOO
 
-    def fetch_prices(self, period: str) -> list[dict]:
+    def fetch_prices(self, commodities: dict, period: str) -> list[dict]:
         # Step 1: fetch all commodities linked to this backend
-        commodities = {
-            commodity.code: commodity
-            for commodity in Commodity.objects.filter(commodity_type__in=self.capabilities, backend=self.backend, auto_update=True)
-        }
-
         unit = commodities[self.base_currency] if self.base_currency in commodities else Commodity.objects.get(code=self.base_currency)
 
         # Step 2: get the latest rates in the databse for each commodity

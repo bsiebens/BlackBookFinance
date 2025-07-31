@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db.transaction import atomic
 
-from ..models import Price
+from ..models import Price, Commodity
 
 
 class BaseBackend(object):
@@ -29,7 +29,13 @@ class BaseBackend(object):
     capabilities: list[str] = []
     backend: str = ""
 
-    def fetch_prices(self, period: str) -> list[dict]:
+    def fetch_commodities(self) -> dict:
+        return {
+            commodity.code: commodity
+            for commodity in Commodity.objects.filter(commodity_type__in=self.capabilities, backend=self.backend, auto_update=True)
+        }
+
+    def fetch_prices(self, commodities: dict, period: str) -> list[dict]:
         """
         Fetches price data for the specified period.
 
@@ -39,6 +45,7 @@ class BaseBackend(object):
         of dictionary objects, where each dictionary represents a record of
         price information.
 
+        :param commodities:
         :param period: The time frame for which price data is requested.
         :type period: Str
         :return: A list of dictionaries containing price data for the specified
@@ -71,7 +78,8 @@ class BaseBackend(object):
         if base_currency is None:
             base_currency = self.base_currency
 
-        new_prices = self.fetch_prices(period=period)
+        commodities = self.fetch_commodities()
+        new_prices = self.fetch_prices(commodities=commodities, period=period)
 
         Price.objects.bulk_create(
             [
