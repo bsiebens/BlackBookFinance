@@ -29,13 +29,25 @@ class BaseBackend(object):
     capabilities: list[str] = []
     backend: str = ""
 
-    def fetch_commodities(self) -> dict:
+    def fetch_commodities(self) -> dict[str, Commodity]:
+        """
+        Fetches commodities from the available database based on specific filters.
+
+        This method retrieves a dictionary of commodities filtered by the given
+        capabilities, backend, and auto-update status. It uses the Commodity model to
+        query for matching database entries. Each commodity is keyed by its unique
+        code, ensuring easy access to individual commodity objects.
+
+        :return: A dictionary mapping commodity codes to corresponding Commodity objects.
+        :rtype: dict[str, Commodity]
+        """
+        
         return {
             commodity.code: commodity
             for commodity in Commodity.objects.filter(commodity_type__in=self.capabilities, backend=self.backend, auto_update=True)
         }
 
-    def fetch_prices(self, commodities: dict, period: str) -> list[dict]:
+    def fetch_prices(self, commodities: dict[str, Commodity], period: str) -> list[dict]:
         """
         Fetches price data for the specified period.
 
@@ -45,7 +57,8 @@ class BaseBackend(object):
         of dictionary objects, where each dictionary represents a record of
         price information.
 
-        :param commodities:
+        :param commodities: The list of commodities that need to be fetched.
+        :type commodities: Dict[str, Commodity]
         :param period: The time frame for which price data is requested.
         :type period: Str
         :return: A list of dictionaries containing price data for the specified
