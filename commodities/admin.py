@@ -11,7 +11,7 @@ class CommodityAdmin(admin.ModelAdmin):
     fieldsets = [
         ["GENERAL INFORMATION", {"fields": ["name", "code", "commodity_type"], "classes": ["wide"]}],
         ["UPDATE INFORMATION", {"fields": ["backend", "auto_update"], "classes": ["wide"]}],
-        ["WEBSITE INFORMATION", {"fields": ["website", "xpath_selector"], "classes": ["wide"]}],
+        ["WEBSITE INFORMATION", {"fields": ["website", "xpath_selector_amount", "website_currency"], "classes": ["wide"]}],
     ]
 
 

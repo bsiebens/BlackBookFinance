@@ -27,6 +27,7 @@ class Commodity(models.Model):
 
     class Backend(models.TextChoices):
         YAHOO = "yahoo", _("Yahoo Finance")
+        WEBSITE = "website", _("Website Scraper")
         CUSTOM = "custom", _("Custom")
 
     name = models.CharField(_("name"), max_length=100)
@@ -36,7 +37,8 @@ class Commodity(models.Model):
     backend = models.CharField(_("backend"), choices=Backend.choices, default=Backend.YAHOO, max_length=10, blank=True, null=True)
     auto_update = models.BooleanField(_("auto update"), default=False)
     website = models.URLField(_("website"), blank=True, null=True)
-    xpath_selector = models.CharField(_("xpath selector"), max_length=255, blank=True, null=True)
+    xpath_selector_amount = models.CharField(_("xpath selector amount"), max_length=255, blank=True, null=True)
+    website_currency = models.ForeignKey("Commodity", verbose_name=_("website currency"), on_delete=models.SET_NULL, blank=True, null=True)
 
     class Meta:
         verbose_name = _("commodity")
