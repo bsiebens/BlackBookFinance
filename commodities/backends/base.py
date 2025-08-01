@@ -24,12 +24,12 @@ class BaseBackend(object):
     :type backend: Str
     """
 
-    name: str
+    name: str = "Base Backend"
     base_currency: str = getattr(settings, "BASE_CURRENCY", "EUR")
     capabilities: list[str] = []
     backend: str = ""
 
-    def fetch_commodities(self) -> dict[str, Commodity]:
+    def _fetch_commodities(self) -> dict[str, Commodity]:
         """
         Fetches commodities from the available database based on specific filters.
 
@@ -42,12 +42,14 @@ class BaseBackend(object):
         :rtype: dict[str, Commodity]
         """
 
-        return {
-            commodity.code: commodity
-            for commodity in Commodity.objects.filter(commodity_type__in=self.capabilities, backend=self.backend, auto_update=True)
-        }
+        commodities = Commodity.objects.filter(backend=self.backend, auto_update=True).select_related("website_currency")
 
-    def fetch_prices(self, commodities: dict[str, Commodity], period: str) -> list[dict]:
+        if self.capabilities[0] != "__all__":
+            commodities = commodities.filter(commodity_type__in=self.capabilities)
+
+        return {commodity.code: commodity for commodity in commodities}
+
+    def _fetch_prices(self, commodities: dict[str, Commodity], period: str) -> list[dict]:
         """
         Fetches price data for the specified period.
 
@@ -91,8 +93,8 @@ class BaseBackend(object):
         if base_currency is None:
             base_currency = self.base_currency
 
-        commodities = self.fetch_commodities()
-        new_prices = self.fetch_prices(commodities=commodities, period=period)
+        commodities = self._fetch_commodities()
+        new_prices = self._fetch_prices(commodities=commodities, period=period)
 
         Price.objects.bulk_create(
             [
