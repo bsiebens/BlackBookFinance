@@ -12,6 +12,8 @@ django = "^5.2.4"
 python-decouple = "^3.8"
 black = "^25.1.0"
 yfinance = "^0.2.65"
+requests = "^2.32.4"
+lxml = "^6.0.0"
 
 
 [build-system]
