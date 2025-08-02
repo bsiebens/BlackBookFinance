@@ -16,8 +16,6 @@ class BaseBackend(object):
 
     :ivar name: The name identifying the backend.
     :type name: Str
-    :ivar base_currency: The default currency for operations, with a fallback to EUR.
-    :type base_currency: Str
     :ivar capabilities: A list of capabilities supported by the backend.
     :type capabilities: List[str]
     :ivar backend: The backend option linked on the Commodity model.
@@ -25,9 +23,19 @@ class BaseBackend(object):
     """
 
     name: str = "Base Backend"
-    base_currency: str = getattr(settings, "BASE_CURRENCY", "EUR")
     capabilities: list[str] = []
     backend: str = ""
+
+    @property
+    def base_currency(self):
+        """
+        Get the base currency from Django settings.
+
+        :return: The base currency code, defaults to "EUR" if not set in settings.
+        :rtype: str
+        """
+
+        return getattr(settings, "BASE_CURRENCY", "EUR")
 
     def _fetch_commodities(self) -> dict[str, Commodity]:
         """
@@ -42,7 +50,7 @@ class BaseBackend(object):
         :rtype: dict[str, Commodity]
         """
 
-        commodities = Commodity.objects.filter(backend=self.backend, auto_update=True).select_related("website_currency")
+        commodities = Commodity.objects.filter(backend=self.backend, auto_update=True)
 
         if self.capabilities[0] != "__all__":
             commodities = commodities.filter(commodity_type__in=self.capabilities)
@@ -70,28 +78,19 @@ class BaseBackend(object):
         raise NotImplementedError
 
     @atomic
-    def update_prices(self, period: str = "7d", base_currency: "str | None" = None) -> None:
+    def update_prices(self, period: str = "7d") -> None:
         """
-        Update prices for a specific period and base currency.
+        Update prices for a specific period.
 
         This method updates financial or market data prices for a defined
-        timeframe (period) and an optional base currency. The period should
+        timeframe (period). The period should
         be specified as a string, e.g., "7d" for 7 days, which determines
-        the length of historical or forecast data being updated. If no base
-        currency is specified, the default currency configuration will be used.
+        the length of historical or forecast data being updated.
 
         :param period: The duration for which prices should be updated
                        (e.g., "7d" for 7 days).
         :type period: Str
-
-        :param base_currency: The currency in which the prices should be
-                              updated. Defaults to None. If None, a default
-                              base currency is used.
-        :type base_currency: Str | None
         """
-
-        if base_currency is None:
-            base_currency = self.base_currency
 
         commodities = self._fetch_commodities()
         new_prices = self._fetch_prices(commodities=commodities, period=period)
