@@ -14,6 +14,7 @@ black = "^25.1.0"
 yfinance = "^0.2.65"
 requests = "^2.32.4"
 lxml = "^6.0.0"
+django-money = "^3.5.4"
 
 
 [tool.poetry.group.dev.dependencies]
