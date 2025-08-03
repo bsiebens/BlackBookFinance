@@ -379,6 +379,20 @@ exchange = ["certifi"]
 test = ["django-stubs", "mixer", "mypy", "pytest (>=8.2,<8.3)", "pytest-cov", "pytest-django"]
 
 [[package]]
+name = "django-tree-queries"
+version = "0.20.0"
+description = "Tree queries with explicit opt-in, without configurability"
+optional = false
+python-versions = ">=3.8"
+files = [
+    { file = "django_tree_queries-0.20.0-py3-none-any.whl", hash = "sha256:56e14105a894b801e41da82ef9e82151d06b1f481cfe39f792c08b6c87c49fce" },
+    { file = "django_tree_queries-0.20.0.tar.gz", hash = "sha256:5439d8bf9f4eafab66175d23ddd4e0a639b1be47cfc357561ff740ef7b6f4df3" },
+]
+
+[package.extras]
+tests = ["coverage", "pytest", "pytest-cov", "pytest-django"]
+
+[[package]]
 name = "frozendict"
 version = "2.4.6"
 description = "A simple immutable dictionary"
@@ -1120,4 +1134,4 @@ repair = ["scipy (>=1.6.3)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.13"
-content-hash = "3e10306adde5dc9ea13be3b1a3b4b3e76e4288f4858532fb847df30eb3f1efb1"
+content-hash = "0dd30cb0535d0218c287fe22099e2613b0bdb9bbaeac9d9caad46867a89cccb4"
