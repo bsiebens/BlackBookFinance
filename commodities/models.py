@@ -17,7 +17,7 @@ class Commodity(models.Model):
     :type code: str
     """
 
-    class CommodityType(models.TextChoices):
+    class CommodityTypes(models.TextChoices):
         CURRENCY = "currency", _("Currency")
         STOCK = "stock", _("Stock")
         FUND = "fund", _("Fund")
@@ -33,7 +33,7 @@ class Commodity(models.Model):
     name = models.CharField(_("name"), max_length=100)
     code = models.CharField(_("code"), max_length=10, unique=True)  # Add unique constraint
 
-    commodity_type = models.CharField(_("commodity type"), choices=CommodityType.choices, default=CommodityType.OTHER, max_length=10)
+    commodity_type = models.CharField(_("commodity type"), choices=CommodityTypes.choices, default=CommodityTypes.OTHER, max_length=10)
     backend = models.CharField(_("backend"), choices=Backend.choices, default=Backend.YAHOO, max_length=10, blank=True, null=True)
     auto_update = models.BooleanField(_("auto update"), default=False)
     website = models.URLField(_("website"), blank=True, null=True)

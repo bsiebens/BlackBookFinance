@@ -57,13 +57,13 @@ class TestBaseBackend(TestCase):
     def setUp(self):
         self.backend = BaseBackend()
         self.test_commodity = Commodity.objects.create(
-            name="Test Commodity", code="TEST", commodity_type=Commodity.CommodityType.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
+            name="Test Commodity", code="TEST", commodity_type=Commodity.CommodityTypes.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
         )
         self.unit_commodity = Commodity.objects.create(
-            name="Test Unit", code="UNIT", commodity_type=Commodity.CommodityType.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
+            name="Test Unit", code="UNIT", commodity_type=Commodity.CommodityTypes.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
         )
         self.warrant_commodity = Commodity.objects.create(
-            name="Warrant", code="WARRANT", commodity_type=Commodity.CommodityType.WARRANT, backend=Commodity.Backend.YAHOO, auto_update=True
+            name="Warrant", code="WARRANT", commodity_type=Commodity.CommodityTypes.WARRANT, backend=Commodity.Backend.YAHOO, auto_update=True
         )
 
     def test_initialization(self):
@@ -88,7 +88,7 @@ class TestBaseBackend(TestCase):
         )
 
     def test_fetch_commodities_filtered_capabilities(self):
-        self.backend.capabilities = [Commodity.CommodityType.CURRENCY]
+        self.backend.capabilities = [Commodity.CommodityTypes.CURRENCY]
         self.backend.backend = Commodity.Backend.YAHOO
 
         result = self.backend._fetch_commodities()
@@ -123,13 +123,13 @@ class TestYahooFinanceBackend(TestCase):
 
         # Create sample commodities
         self.commodity1 = Commodity.objects.create(
-            name="Euro", code="EUR", commodity_type=Commodity.CommodityType.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
+            name="Euro", code="EUR", commodity_type=Commodity.CommodityTypes.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
         )
         self.commodity2 = Commodity.objects.create(
-            name="British Pound", code="GBP", commodity_type=Commodity.CommodityType.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
+            name="British Pound", code="GBP", commodity_type=Commodity.CommodityTypes.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
         )
         # Create a unit for commodities
-        self.unit = Commodity.objects.create(name="US Dollar", code="USD", commodity_type=Commodity.CommodityType.CURRENCY)
+        self.unit = Commodity.objects.create(name="US Dollar", code="USD", commodity_type=Commodity.CommodityTypes.CURRENCY)
 
     @override_settings(BASE_CURRENCY="USD")
     @patch("commodities.backends.yahoo.yf.download")
@@ -167,7 +167,7 @@ class TestYahooFinanceBackend(TestCase):
 
 class TestWebsiteBackendFetchPrices(TestCase):
     def setUp(self):
-        self.currency = Commodity.objects.create(name="USD", code="USD", commodity_type=Commodity.CommodityType.CURRENCY)
+        self.currency = Commodity.objects.create(name="USD", code="USD", commodity_type=Commodity.CommodityTypes.CURRENCY)
         self.commodity = Commodity.objects.create(
             name="Gold",
             code="GOLD",

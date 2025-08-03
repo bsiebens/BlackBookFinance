@@ -12,7 +12,7 @@ from ..models import Commodity, Price
 
 class YahooFinanceBackend(BaseBackend):
     name = "Yahoo Finance"
-    capabilities = [Commodity.CommodityType.CURRENCY]
+    capabilities = [Commodity.CommodityTypes.CURRENCY]
     backend = Commodity.Backend.YAHOO
 
     def _fetch_prices(self, commodities: dict, period: str) -> list[dict]:
