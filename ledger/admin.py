@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import QuerySet
 from django.utils.html import format_html
 
 from .models import Bank, Account
@@ -24,10 +25,10 @@ class AccountAdmin(admin.ModelAdmin):
     ]
     readonly_fields = ["calculated_name"]
 
-    def get_queryset(self, request):
+    def get_queryset(self, request) -> QuerySet:
         return super().get_queryset(request).with_tree_fields().order_siblings_by("name")
 
-    def indented_name(self, obj):
+    def indented_name(self, obj) -> str:
         """Display account name with indentation and tree indicators based on tree depth."""
         # Calculate indentation (reduce spacing since we're adding visual elements)
         indent = "&nbsp;" * 2 * obj.tree_depth
