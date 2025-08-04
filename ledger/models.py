@@ -18,11 +18,12 @@ class Bank(models.Model):
     :type name: str
     """
 
-    name = models.CharField(_("name"), max_length=250, unique=True)
+    name = models.CharField(_("name"), max_length=250, unique=True, db_index=True)
 
     class Meta:
         verbose_name = _("bank")
         verbose_name_plural = _("banks")
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
@@ -38,7 +39,7 @@ class Account(TreeNode):
         CASH = "cash", _("Cash")
         OTHER = "other", _("Other")
 
-    name = models.CharField(_("name"), max_length=250)
+    name = models.CharField(_("name"), max_length=250, db_index=True)
     type = models.CharField(_("type"), max_length=15, choices=AccountTypes.choices, default=AccountTypes.OTHER)
     bank = models.ForeignKey(Bank, verbose_name=_("bank"), on_delete=models.SET_NULL, blank=True, null=True, related_name="accounts")
     default_currency = models.ForeignKey(
@@ -49,6 +50,7 @@ class Account(TreeNode):
         blank=True,
         null=True,
     )
+    calculated_name = models.CharField(_("calculated name"), max_length=1000, blank=True, editable=False)
 
     created = models.DateTimeField(_("created"), auto_now_add=True)
     updated = models.DateTimeField(_("updated"), auto_now=True)
@@ -57,3 +59,4 @@ class Account(TreeNode):
         verbose_name = _("account")
         verbose_name_plural = _("accounts")
         constraints = [models.UniqueConstraint(fields=["name", "parent"], name="unique_account_name_per_parent")]
+        ordering = ["name"]
