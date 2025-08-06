@@ -121,7 +121,10 @@ class Transaction(models.Model):
         ordering = ["-date"]
 
     def __str__(self):
-        return f"{self.description} ({self.date.isoformat()}"
+        if self.description is not None and self.description != "":
+            return f"{self.description} ({self.date.isoformat()}"
+
+        return f"Transaction {self.id} ({self.date.isoformat()})"
 
 
 class Posting(models.Model):
@@ -162,4 +165,4 @@ class Posting(models.Model):
         ordering = ["transaction", "account"]
 
     def __str__(self):
-        return f"{self.transaction} - {self.account}"
+        return f"{self.transaction} ({self.account.name}): {self.amount} {self.commodity}"
