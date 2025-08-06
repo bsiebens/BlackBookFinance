@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.db.models import QuerySet
 from django.utils.html import format_html
 
-from .models import Bank, Account
+from .models import Bank, Account, Transaction, Posting
 
 
 @admin.register(Bank)
@@ -21,9 +21,8 @@ class AccountAdmin(admin.ModelAdmin):
     list_filter = ["type", "bank", "default_currency"]
     search_fields = ["name"]
     fieldsets = [
-        ["GENERAL INFORMATION", {"fields": ["parent", "name", "type", "bank", "default_currency", "calculated_name"], "classes": ["wide"]}],
+        ["GENERAL INFORMATION", {"fields": ["parent", "name", "type", "bank", "default_currency"], "classes": ["wide"]}],
     ]
-    readonly_fields = ["calculated_name"]
 
     def get_queryset(self, request) -> QuerySet:
         return super().get_queryset(request).with_tree_fields().order_siblings_by("name")
@@ -46,3 +45,7 @@ class AccountAdmin(admin.ModelAdmin):
 
     indented_name.short_description = "Name"
     indented_name.admin_order_field = "name"
+
+
+admin.site.register(Transaction)
+admin.site.register(Posting)

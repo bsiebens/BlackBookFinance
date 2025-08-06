@@ -1,8 +1,16 @@
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from tree_queries.models import TreeNode
 
 from commodities.models import Commodity
+
+
+def _get_base_currency():
+    base_currency = getattr(settings, "BASE_CURRENCY", ("Euro", "EUR"))
+
+    return Commodity.objects.get_or_create(code=base_currency[1], name=base_currency[0], commodity_type=Commodity.CommodityTypes.CURRENCY)[0].id
 
 
 class Bank(models.Model):
@@ -15,7 +23,7 @@ class Bank(models.Model):
     localization support for internationalized applications.
 
     :ivar name: The unique name of the bank.
-    :type name: str
+    :type name: Str
     """
 
     name = models.CharField(_("name"), max_length=250, unique=True, db_index=True)
@@ -30,6 +38,26 @@ class Bank(models.Model):
 
 
 class Account(TreeNode):
+    """
+    Represents an account in a hierarchical structure within a financial or operational context.
+
+    The `Account` class allows for the organization of entities such as assets, liabilities, and other financial
+    categories, providing support for default currencies and related banks.
+
+    :ivar name: The name of the account.
+    :type name: Str
+    :ivar type: The type of the account, chosen from predefined account types.
+    :type type: Str
+    :ivar bank: The bank associated with the account, allowing null values.
+    :type bank: Bank
+    :ivar default_currency: The default currency of the account, restricted to commodities of type "currency".
+    :type default_currency: Commodity
+    :ivar created: The timestamp when the account was created.
+    :type created: datetime.datetime
+    :ivar updated: The timestamp when the account was last updated.
+    :type updated: datetime.datetime
+    """
+
     class AccountTypes(models.TextChoices):
         ASSETS = "assets", _("Assets")
         LIABILITIES = "liabilities", _("Liabilities")
@@ -50,7 +78,6 @@ class Account(TreeNode):
         blank=True,
         null=True,
     )
-    calculated_name = models.CharField(_("calculated name"), max_length=1000, blank=True, editable=False)
 
     created = models.DateTimeField(_("created"), auto_now_add=True)
     updated = models.DateTimeField(_("updated"), auto_now=True)
@@ -60,3 +87,60 @@ class Account(TreeNode):
         verbose_name_plural = _("accounts")
         constraints = [models.UniqueConstraint(fields=["name", "parent"], name="unique_account_name_per_parent")]
         ordering = ["name"]
+
+
+class Transaction(models.Model):
+    description = models.CharField(_("description"), max_length=250, blank=True, null=True)
+    date = models.DateField(_("date"), default=timezone.now)
+
+    created = models.DateTimeField(_("created"), auto_now_add=True)
+    updated = models.DateTimeField(_("updated"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("transaction")
+        verbose_name_plural = _("transactions")
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.description} ({self.date.isoformat()}"
+
+
+class Posting(models.Model):
+    """
+    Represents a financial posting in a transaction.
+
+    The Posting class models an individual financial posting related to a
+    specific transaction. It includes references to the accounts involved,
+    the amount transacted, the associated commodity, and timestamps for
+    created and updated dates.
+
+    :ivar transaction: The transaction to which this posting belongs.
+    :type transaction: ForeignKey
+    :ivar account: The account involved in this posting.
+    :type account: ForeignKey
+    :ivar amount: The monetary amount associated with this posting.
+    :type amount: DecimalField
+    :ivar commodity: The commodity associated with this posting, such as a
+        currency or other financial unit.
+    :type commodity: ForeignKey
+    :ivar created: The timestamp when this posting was created.
+    :type created: DateTimeField
+    :ivar updated: The timestamp when this posting was last updated.
+    :type updated: DateTimeField
+    """
+
+    transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE, related_name="postings", verbose_name=_("transaction"))
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="postings", verbose_name=_("account"))
+    amount = models.DecimalField(_("amount"), max_digits=10, decimal_places=2, default=0)
+    commodity = models.ForeignKey(Commodity, on_delete=models.PROTECT, verbose_name=_("commodity"), default=_get_base_currency)
+
+    created = models.DateTimeField(_("created"), auto_now_add=True)
+    updated = models.DateTimeField(_("updated"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("posting")
+        verbose_name_plural = _("postings")
+        ordering = ["transaction", "account"]
+
+    def __str__(self):
+        return f"{self.transaction} - {self.account}"

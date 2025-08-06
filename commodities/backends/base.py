@@ -31,11 +31,11 @@ class BaseBackend(object):
         """
         Get the base currency from Django settings.
 
-        :return: The base currency code, defaults to "EUR" if not set in settings.
-        :rtype: str
+        :return: The base currency code defaults to "EUR" if not set in settings.
+        :rtype: Str
         """
 
-        return getattr(settings, "BASE_CURRENCY", "EUR")
+        return getattr(settings, "BASE_CURRENCY", ("Euro", "EUR"))[1]
 
     def _fetch_commodities(self) -> dict[str, Commodity]:
         """
@@ -47,7 +47,7 @@ class BaseBackend(object):
         code, ensuring easy access to individual commodity objects.
 
         :return: A dictionary mapping commodity codes to corresponding Commodity objects.
-        :rtype: dict[str, Commodity]
+        :rtype: Dict[str, Commodity]
         """
 
         commodities = Commodity.objects.filter(backend=self.backend, auto_update=True)
