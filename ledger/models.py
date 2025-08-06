@@ -90,8 +90,27 @@ class Account(TreeNode):
 
 
 class Transaction(models.Model):
+    """
+    Represents a financial transaction record.
+
+    The Transaction class is used to store information about financial transactions, including
+    a description, date, amounts involved, as well as timestamps for record creation and updates.
+
+    :ivar description: Description of the transaction. Can be blank or null.
+    :type description: Str
+    :ivar date: The date of the transaction. Defaults to the current date.
+    :type date: datetime.date
+    :ivar amounts: A JSON object holding amounts related to the transaction. Defaults to an empty dictionary.
+    :type amounts: Dict
+    :ivar created: Timestamp indicating when the transaction record was created. Automatically set.
+    :type created: datetime.datetime
+    :ivar updated: Timestamp indicating when the transaction record was last updated. Automatically set.
+    :type updated: datetime.datetime
+    """
+
     description = models.CharField(_("description"), max_length=250, blank=True, null=True)
     date = models.DateField(_("date"), default=timezone.now)
+    amounts = models.JSONField(_("amounts"), default=dict)
 
     created = models.DateTimeField(_("created"), auto_now_add=True)
     updated = models.DateTimeField(_("updated"), auto_now=True)

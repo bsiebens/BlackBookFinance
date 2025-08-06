@@ -17,9 +17,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="posting",
             name="amount",
-            field=models.DecimalField(
-                decimal_places=2, default=0, max_digits=10, verbose_name="amount"
-            ),
+            field=models.DecimalField(decimal_places=2, default=0, max_digits=10, verbose_name="amount"),
         ),
         migrations.AddField(
             model_name="posting",
