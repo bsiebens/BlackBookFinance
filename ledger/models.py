@@ -126,6 +126,8 @@ class Transaction(models.Model):
 
         return f"Transaction {self.id} ({self.date.isoformat()})"
 
+    def update_amounts(self): ...
+
 
 class Posting(models.Model):
     """
