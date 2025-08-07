@@ -5,6 +5,11 @@ from django.utils.html import format_html
 from .models import Bank, Account, Transaction, Posting
 
 
+class PostingInline(admin.TabularInline):
+    model = Posting
+    extra = 0
+
+
 @admin.register(Bank)
 class BankAdmin(admin.ModelAdmin):
     list_display = ["name"]
@@ -47,5 +52,13 @@ class AccountAdmin(admin.ModelAdmin):
     indented_name.admin_order_field = "name"
 
 
-admin.site.register(Transaction)
-admin.site.register(Posting)
+@admin.register(Transaction)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = ["description", "date", "created", "updated"]
+    search_fields = ["description"]
+    date_hierarchy = "date"
+    ordering = ["-date"]
+    fieldsets = [
+        ["GENERAL INFORMATION", {"fields": ["date", "description"], "classes": ["wide"]}],
+    ]
+    inlines = [PostingInline]
