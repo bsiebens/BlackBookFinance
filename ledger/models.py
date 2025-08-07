@@ -19,7 +19,8 @@ class Bank(models.Model):
     """
     Represents a bank entity used in financial or organizational contexts.
 
-    This class defines the structure and behavior of a bank, allowing it to be uniquely identified by its name. It supports Django's ORM functionality by inheriting from the `models.Model` class and includes localization support for internationalized applications.
+    This class defines the structure and behavior of a bank, allowing it to be uniquely identified by its name.
+    It supports Django's ORM functionality by inheriting from the `models.Model` class and includes localization support for internationalized applications.
 
     :ivar name: The unique name of the bank.
     :type name: Str
@@ -129,7 +130,8 @@ class Transaction(models.Model):
 
     def update_amounts(self) -> None:
         """
-        Updates the `amounts` attribute based on the postings associated with the account. The amounts are aggregated per commodity for postings under accounts of type ASSETS. The updated `amounts` attribute is then persisted.
+        Updates the `amounts` attribute based on the postings associated with the account. The amounts are aggregated per commodity for postings under accounts of type ASSETS.
+        The updated `amounts` attribute is then persisted.
 
         :raises ValueError: If a posting has an invalid or missing attribute.
         :return: None
@@ -179,7 +181,8 @@ class Posting(models.Model):
         """
         Calculates the balance amount for the given commodity based on the transaction's postings.
 
-        This method iterates through the transaction's postings, excluding those marked as balance postings, and calculates the balance amount. If the posting's commodity matches the specified commodity, its amount is subtracted directly. Otherwise, the posting's amount is converted to the specified commodity before subtraction.
+        This method iterates through the transaction's postings, excluding those marked as balance postings, and calculates the balance amount.
+        If the posting's commodity matches the specified commodity, its amount is subtracted directly. Otherwise, the posting's amount is converted to the specified commodity before subtraction.
 
         :return: The calculated balance amount as a Decimal value.
         :rtype: Decimal
