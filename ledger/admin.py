@@ -8,6 +8,7 @@ from .models import Bank, Account, Transaction, Posting
 class PostingInline(admin.TabularInline):
     model = Posting
     extra = 0
+    readonly_fields = ["foreign_amount", "foreign_commodity"]
 
 
 @admin.register(Bank)

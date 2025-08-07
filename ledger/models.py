@@ -160,6 +160,10 @@ class Posting(models.Model):
     commodity = models.ForeignKey(
         Commodity, on_delete=models.PROTECT, verbose_name=_("commodity"), default=_get_base_currency, related_name="postings"
     )
+    foreign_amount = models.DecimalField(_("foreign amount"), max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+    foreign_commodity = models.ForeignKey(
+        Commodity, verbose_name=_("foreign commodity"), on_delete=models.PROTECT, blank=True, null=True, related_name="foreign_postings"
+    )
 
     is_balance_posting = models.BooleanField(_("is balance posting"), default=False)
 
@@ -172,6 +176,13 @@ class Posting(models.Model):
         ordering = ["transaction", "account"]
 
     def save(self, *args, **kwargs) -> None:
+        if self.commodity != self.account.default_currency:
+            self.foreign_amount = self.amount
+            self.foreign_commodity = self.commodity
+
+            self.amount = self.foreign_amount * self.foreign_commodity.convert_to(self.account.default_currency)
+            self.commodity = self.account.default_currency
+
         if self.amount == Decimal(0):
             self.is_balance_posting = True
 
@@ -199,132 +210,3 @@ class Posting(models.Model):
                 total -= posting.amount * posting.commodity.convert_to(self.commodity)
 
         return total
-
-
-# class Posting(models.Model):
-#     transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE, related_name="postings", verbose_name=_("transaction"))
-#     account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="postings", verbose_name=_("account"))
-#     amount = models.DecimalField(_("amount"), max_digits=10, decimal_places=2, default=0)
-#     commodity = models.ForeignKey(
-#         Commodity, on_delete=models.PROTECT, verbose_name=_("commodity"), default=_get_base_currency, related_name="postings"
-#     )
-#     converted_amount = models.DecimalField(_("converted amount"), max_digits=10, decimal_places=2, default=0, blank=True, null=True)
-#     converted_commodity = models.ForeignKey(
-#         Commodity, verbose_name=_("converted commodity"), on_delete=models.PROTECT, blank=True, null=True, related_name="converted_postings"
-#     )
-#     is_balance_posting = models.BooleanField(_("is balance posting"), default=False)
-#
-#     created = models.DateTimeField(_("created"), auto_now_add=True)
-#     updated = models.DateTimeField(_("updated"), auto_now=True)
-#
-#     class Meta:
-#         verbose_name = _("posting")
-#         verbose_name_plural = _("postings")
-#         ordering = ["transaction", "account"]
-#
-#     def __str__(self):
-#         return f"{self.transaction} ({self.account.name}): {self.amount} {self.commodity}"
-#
-#     def save(self, *args, **kwargs):
-#         if self.account.default_currency and self.commodity != self.account.default_currency:
-#             self.converted_commodity = self.account.default_currency
-#             self.converted_amount = self.amount * self.commodity.convert_to(self.account.default_currency)
-#
-#         else:
-#             self.converted_commodity = self.commodity
-#             self.converted_amount = self.amount
-#
-#         if self.amount == Decimal(0):
-#             self.is_balance_posting = True
-#
-#         if self.is_balance_posting:
-#             self._calculate_balance_amount()
-#
-#         super().save(*args, **kwargs)
-#
-#     def _calculate_balance_amount(self) -> None:
-#         other_postings = self.transaction.postings.exclude(id=self.id) if self.id else self.transaction.postings.all()
-#
-#         total = Decimal(0)
-#         for posting in other_postings:
-#             if posting.commodity != self.commodity:
-#                 converted_amount = posting.amount * posting.commodity.convert_to(self.commodity)
-#                 total += converted_amount
-#
-#             else:
-#                 total += posting.amount
-#
-#         self.amount = -total
-
-
-# class Posting(models.Model):
-#     """
-#     Represents a financial posting in a transaction.
-#
-#     The Posting class models an individual financial posting related to a
-#     specific transaction. It includes references to the accounts involved,
-#     the amount transacted, the associated commodity, and timestamps for
-#     created and updated dates.
-#
-#     :ivar transaction: The transaction to which this posting belongs.
-#     :type transaction: ForeignKey
-#     :ivar account: The account involved in this posting.
-#     :type account: ForeignKey
-#     :ivar amount: The monetary amount associated with this posting.
-#     :type amount: DecimalField
-#     :ivar commodity: The commodity associated with this posting, such as a
-#         currency or other financial unit.
-#     :type commodity: ForeignKey
-#     :ivar created: The timestamp when this posting was created.
-#     :type created: DateTimeField
-#     :ivar updated: The timestamp when this posting was last updated.
-#     :type updated: DateTimeField
-#     """
-#
-#     transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE, related_name="postings", verbose_name=_("transaction"))
-#     account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="postings", verbose_name=_("account"))
-#     amount = models.DecimalField(_("amount"), max_digits=10, decimal_places=2, default=0)
-#     commodity = models.ForeignKey(
-#         Commodity, on_delete=models.PROTECT, verbose_name=_("commodity"), default=_get_base_currency, related_name="postings"
-#     )
-#     foreign_amount = models.DecimalField(_("foreign amount"), max_digits=10, decimal_places=2, default=0, blank=True, null=True)
-#     foreign_commodity = models.ForeignKey(
-#         Commodity,
-#         verbose_name=_("foreign commodity"),
-#         on_delete=models.PROTECT,
-#         default=_get_base_currency,
-#         blank=True,
-#         null=True,
-#         related_name="foreign_postings",
-#     )
-#
-#     created = models.DateTimeField(_("created"), auto_now_add=True)
-#     updated = models.DateTimeField(_("updated"), auto_now=True)
-#
-#     class Meta:
-#         verbose_name = _("posting")
-#         verbose_name_plural = _("postings")
-#         ordering = ["transaction", "account"]
-#
-#     def __str__(self):
-#         return f"{self.transaction} ({self.account.name}): {self.amount} {self.commodity}"
-#
-#     def save(self, *args, **kwargs):
-#         if self.amount == Decimal(0):
-#             totals = self.transaction.postings.all().values("commodity__code").annotate(total=Sum("amount")).values_list("commodity__code", "total")
-#
-#             for total in totals:
-#                 if total[0] == self.account.default_currency.code:
-#                     self.amount -= total[1]
-#
-#                 else:
-#                     self.amount -= total[1] * Commodity.objects.get(code=total[0]).convert_to(self.commodity)
-#
-#         if self.commodity != self.account.default_currency:
-#             self.foreign_amount = self.amount
-#             self.foreign_commodity = self.commodity
-#
-#             self.amount = self.foreign_amount * self.foreign_commodity.convert_to(self.account.default_currency)
-#             self.commodity = self.account.default_currency
-#
-#         super().save(*args, **kwargs)
