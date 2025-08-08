@@ -2,8 +2,11 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from moneyed import Money
 from tree_queries.models import TreeNode
 
 from commodities.models import Commodity
@@ -73,10 +76,8 @@ class Account(TreeNode):
         Commodity,
         limit_choices_to={"commodity_type": Commodity.CommodityTypes.CURRENCY},
         verbose_name=_("default currency"),
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         default=_get_base_currency,
-        blank=True,
-        null=True,
     )
 
     created = models.DateTimeField(_("created"), auto_now_add=True)
@@ -90,6 +91,19 @@ class Account(TreeNode):
 
     def __str__(self):
         return f"{self.get_type_display()}:{":".join([account.name for account in self.ancestors(include_self=True)])}"
+
+    @property
+    def balance(self) -> Money:
+        """
+        Retrieve the total balance of the account based on the aggregated number of all postings.
+
+        :return: The total balance as a Money object, representing the sum of postings in the account.
+        :rtype: Money
+        """
+
+        total_amount = self.postings.aggregate(total_amount=Coalesce(Sum("amount"), Decimal(0)))["total_amount"]
+
+        return Money(total_amount, self.default_currency.code)
 
 
 class Transaction(models.Model):
@@ -112,7 +126,6 @@ class Transaction(models.Model):
 
     description = models.CharField(_("description"), max_length=250, blank=True, null=True)
     date = models.DateField(_("date"), default=timezone.now)
-    amounts = models.JSONField(_("amounts"), default=dict, blank=True, null=True)
 
     created = models.DateTimeField(_("created"), auto_now_add=True)
     updated = models.DateTimeField(_("updated"), auto_now=True)
@@ -128,16 +141,25 @@ class Transaction(models.Model):
 
         return f"Transaction {self.id} ({self.date.isoformat()})"
 
-    def update_amounts(self) -> None:
+    @property
+    def balance(self) -> Money:
         """
-        Updates the `amounts` attribute based on the postings associated with the account. The amounts are aggregated per commodity for postings under accounts of type ASSETS.
-        The updated `amounts` attribute is then persisted.
+        Calculates the total balance in terms of a base currency by aggregating
+        all related postings and converting amounts as necessary.
 
-        :raises ValueError: If a posting has an invalid or missing attribute.
-        :return: None
+        This property computes the balance using all postings associated. It
+        aggregates amounts for each commodity and converts them into the base
+        currency using predefined conversion rates. The result is returned
+        as a `Money` object that encapsulates the final balance and its
+        currency.
+
+        :return: An instance of the `Money` class representing the total
+                 balance in the base currency.
+        :rtype: Money
         """
 
         amounts = {}
+        base_currency = Commodity.objects.get(id=_get_base_currency())
 
         for posting in self.postings.filter(account__type=Account.AccountTypes.ASSETS):
             if posting.commodity.code in amounts:
@@ -145,11 +167,14 @@ class Transaction(models.Model):
             else:
                 amounts[posting.commodity.code] = posting.amount
 
-        # Convert Decimal values to strings before saving to JSONField
-        serializable_amounts = {currency: str(amount) for currency, amount in amounts.items()}
+        if base_currency.code not in amounts:
+            amounts[base_currency.code] = Decimal(0)
 
-        self.amounts = serializable_amounts
-        self.save()
+        for code, amount in amounts.items():
+            if code != base_currency.code:
+                amounts[base_currency.code] += amount * Commodity.objects.get(code=code).convert_to(base_currency.code)
+
+        return Money(amounts[base_currency.code], base_currency.code)
 
 
 class Posting(models.Model):

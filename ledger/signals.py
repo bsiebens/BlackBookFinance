@@ -1,6 +1,3 @@
-# @receiver(post_save, sender=Posting)
-# def update_transaction_amounts(sender, instance, **kwargs) -> None:
-#    instance.transaction.update_amounts()
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 

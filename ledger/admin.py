@@ -1,6 +1,8 @@
+from django.conf import settings
 from django.contrib import admin
 from django.db.models import QuerySet
 from django.utils.html import format_html
+from moneyed.l10n import format_money
 
 from .models import Bank, Account, Transaction, Posting
 
@@ -23,7 +25,7 @@ class BankAdmin(admin.ModelAdmin):
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ["indented_name", "type", "bank", "default_currency", "created", "updated"]
+    list_display = ["indented_name", "type", "bank", "default_currency", "display_balance", "created", "updated"]
     list_filter = ["type", "bank", "default_currency"]
     search_fields = ["name"]
     fieldsets = [
@@ -32,6 +34,12 @@ class AccountAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request) -> QuerySet:
         return super().get_queryset(request).with_tree_fields().order_siblings_by("name")
+
+    def display_balance(self, obj) -> str:
+        """Display balance as currency amount."""
+        return format_money(obj.balance, locale=getattr(settings, "LANGUAGE_CODE", "en_US").replace("-", "_"))
+
+    display_balance.short_description = "Balance"
 
     def indented_name(self, obj) -> str:
         """Display account name with indentation and tree indicators based on tree depth."""
@@ -55,11 +63,17 @@ class AccountAdmin(admin.ModelAdmin):
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ["description", "date", "created", "updated"]
+    list_display = ["description", "date", "display_balance", "created", "updated"]
     search_fields = ["description"]
     date_hierarchy = "date"
     ordering = ["-date"]
     fieldsets = [
-        ["GENERAL INFORMATION", {"fields": ["date", "description"], "classes": ["wide"]}],
+        ["GENERAL INFORMATION", {"fields": ["date", "description", "amounts"], "classes": ["wide"]}],
     ]
     inlines = [PostingInline]
+
+    def display_balance(self, obj) -> str:
+        """Display balance as currency amount."""
+        return format_money(obj.balance, locale=getattr(settings, "LANGUAGE_CODE", "en_US").replace("-", "_"))
+
+    display_balance.short_description = "Balance"
