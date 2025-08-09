@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Sum
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from moneyed import Money
@@ -101,18 +102,19 @@ class Account(TreeNode):
         """
 
         amounts = {}
+        commodity_totals = self.postings.values("commodity__code").annotate(total=Sum("amount"))
 
-        for posting in self.postings.all():
-            if posting.commodity.code in amounts:
-                amounts[posting.commodity.code] += posting.amount
+        for commodity in commodity_totals:
+            if commodity["commodity__code"] in amounts:
+                amounts[commodity["commodity__code"]] += commodity["total"]
             else:
-                amounts[posting.commodity.code] = posting.amount
+                amounts[commodity["commodity__code"]] = commodity["total"]
 
         if self.default_currency.code not in amounts:
             amounts[self.default_currency.code] = Decimal(0)
 
         for code, amount in amounts.items():
-            if code != self.default_currency.code:
+            if code != self.default_currency.code and code is not None:
                 amounts[self.default_currency.code] += amount * Commodity.objects.get(code=code).convert_to(self.default_currency.code)
 
         return Money(amounts[self.default_currency.code], self.default_currency.code)
@@ -172,18 +174,19 @@ class Transaction(models.Model):
 
         amounts = {}
         base_currency = Commodity.objects.get(id=_get_base_currency())
+        commodity_totals = self.postings.filter(account__type=Account.AccountTypes.ASSETS).values("commodity__code").annotate(total=Sum("amount"))
 
-        for posting in self.postings.filter(account__type=Account.AccountTypes.ASSETS):
-            if posting.commodity.code in amounts:
-                amounts[posting.commodity.code] += posting.amount
+        for commodity in commodity_totals:
+            if commodity["commodity__code"] in amounts:
+                amounts[commodity["commodity__code"]] += commodity["total"]
             else:
-                amounts[posting.commodity.code] = posting.amount
+                amounts[commodity["commodity__code"]] = commodity["total"]
 
         if base_currency.code not in amounts:
             amounts[base_currency.code] = Decimal(0)
 
         for code, amount in amounts.items():
-            if code != base_currency.code:
+            if code != base_currency.code and code is not None:
                 amounts[base_currency.code] += amount * Commodity.objects.get(code=code).convert_to(base_currency.code)
 
         return Money(amounts[base_currency.code], base_currency.code)
