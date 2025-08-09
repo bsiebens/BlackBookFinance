@@ -14,9 +14,9 @@ from .models import Commodity, Price
 
 class CommodityTestCase(TestCase):
     def setUp(self):
-        self.eur = Commodity.objects.create(name="Euro", code="EUR")
-        self.usd = Commodity.objects.create(name="US Dollar", code="USD")
-        self.gbp = Commodity.objects.create(name="Pound Sterling", code="GBP")
+        self.eur, _ = Commodity.objects.get_or_create(name="Euro", code="EUR")
+        self.usd, _ = Commodity.objects.get_or_create(name="US Dollar", code="USD")
+        self.gbp, _ = Commodity.objects.get_or_create(name="Pound Sterling", code="GBP")
 
     def test_str(self):
         self.assertEqual(str(self.eur), "Euro (EUR)")
@@ -56,13 +56,13 @@ class CommodityTestCase(TestCase):
 class TestBaseBackend(TestCase):
     def setUp(self):
         self.backend = BaseBackend()
-        self.test_commodity = Commodity.objects.create(
+        self.test_commodity, _ = Commodity.objects.get_or_create(
             name="Test Commodity", code="TEST", commodity_type=Commodity.CommodityTypes.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
         )
-        self.unit_commodity = Commodity.objects.create(
+        self.unit_commodity, _ = Commodity.objects.get_or_create(
             name="Test Unit", code="UNIT", commodity_type=Commodity.CommodityTypes.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
         )
-        self.warrant_commodity = Commodity.objects.create(
+        self.warrant_commodity, _ = Commodity.objects.get_or_create(
             name="Warrant", code="WARRANT", commodity_type=Commodity.CommodityTypes.WARRANT, backend=Commodity.Backend.YAHOO, auto_update=True
         )
 
@@ -99,7 +99,7 @@ class TestBaseBackend(TestCase):
         with self.assertRaises(NotImplementedError):
             self.backend._fetch_prices({}, "7d")
 
-    @override_settings(BASE_CURRENCY="USD")
+    @override_settings(BASE_CURRENCY=("US Dollar", "USD"))
     def test_base_currency_override(self):
         self.assertEqual(BaseBackend().base_currency, "USD")
 
@@ -121,17 +121,20 @@ class TestYahooFinanceBackend(TestCase):
     def setUp(self):
         self.backend = YahooFinanceBackend()
 
+        defaults = {"backend": Commodity.Backend.YAHOO, "auto_update": True}
+        create_defaults = defaults.copy()
+
         # Create sample commodities
-        self.commodity1 = Commodity.objects.create(
-            name="Euro", code="EUR", commodity_type=Commodity.CommodityTypes.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
+        self.commodity1, _ = Commodity.objects.update_or_create(
+            name="Euro", code="EUR", commodity_type=Commodity.CommodityTypes.CURRENCY, defaults=defaults, create_defaults=create_defaults
         )
-        self.commodity2 = Commodity.objects.create(
-            name="British Pound", code="GBP", commodity_type=Commodity.CommodityTypes.CURRENCY, backend=Commodity.Backend.YAHOO, auto_update=True
+        self.commodity2, _ = Commodity.objects.update_or_create(
+            name="British Pound", code="GBP", commodity_type=Commodity.CommodityTypes.CURRENCY, defaults=defaults, create_defaults=create_defaults
         )
         # Create a unit for commodities
-        self.unit = Commodity.objects.create(name="US Dollar", code="USD", commodity_type=Commodity.CommodityTypes.CURRENCY)
+        self.unit, _ = Commodity.objects.get_or_create(name="US Dollar", code="USD", commodity_type=Commodity.CommodityTypes.CURRENCY)
 
-    @override_settings(BASE_CURRENCY="USD")
+    @override_settings(BASE_CURRENCY=("US Dollar", "USD"))
     @patch("commodities.backends.yahoo.yf.download")
     def test_fetch_prices_empty_response(self, mock_yf_download):
         mock_yf_download.return_value = MagicMock(empty=True)
@@ -139,7 +142,7 @@ class TestYahooFinanceBackend(TestCase):
         result = self.backend._fetch_prices(commodities, period="7d")
         self.assertEqual(result, [])
 
-    @override_settings(BASE_CURRENCY="USD")
+    @override_settings(BASE_CURRENCY=("US Dollar", "USD"))
     @patch("commodities.backends.yahoo.yf.download")
     def test_fetch_prices_successful_response(self, mock_yf_download):
         # Create the proper datetime index for the mock DataFrame

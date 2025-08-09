@@ -13,9 +13,10 @@ from commodities.models import Commodity
 
 
 def _get_base_currency():
-    base_currency = getattr(settings, "BASE_CURRENCY", ("Euro", "EUR"))
+    name, code = getattr(settings, "BASE_CURRENCY", ("Euro", "EUR"))
+    base_currency, _ = Commodity.objects.get_or_create(name=name, code=code, commodity_type=Commodity.CommodityTypes.CURRENCY)
 
-    return Commodity.objects.get_or_create(code=base_currency[1], name=base_currency[0], commodity_type=Commodity.CommodityTypes.CURRENCY)[0].id
+    return base_currency.id
 
 
 class Bank(models.Model):
@@ -204,7 +205,7 @@ class Posting(models.Model):
     foreign_commodity = models.ForeignKey(
         Commodity,
         verbose_name=_("foreign commodity"),
-        default=_get_base_currency(),
+        default=_get_base_currency,
         on_delete=models.PROTECT,
         blank=True,
         null=True,
