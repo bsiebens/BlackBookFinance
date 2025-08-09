@@ -1,9 +1,8 @@
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Sum
-from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from moneyed import Money
@@ -101,9 +100,22 @@ class Account(TreeNode):
         :rtype: Money
         """
 
-        total_amount = self.postings.aggregate(total_amount=Coalesce(Sum("amount"), Decimal(0)))["total_amount"]
+        amounts = {}
 
-        return Money(total_amount, self.default_currency.code)
+        for posting in self.postings.all():
+            if posting.commodity.code in amounts:
+                amounts[posting.commodity.code] += posting.amount
+            else:
+                amounts[posting.commodity.code] = posting.amount
+
+        if self.default_currency.code not in amounts:
+            amounts[self.default_currency.code] = Decimal(0)
+
+        for code, amount in amounts.items():
+            if code != self.default_currency.code:
+                amounts[self.default_currency.code] += amount * Commodity.objects.get(code=code).convert_to(self.default_currency.code)
+
+        return Money(amounts[self.default_currency.code], self.default_currency.code)
 
 
 class Transaction(models.Model):
@@ -187,7 +199,13 @@ class Posting(models.Model):
     )
     foreign_amount = models.DecimalField(_("foreign amount"), max_digits=10, decimal_places=2, default=0, blank=True, null=True)
     foreign_commodity = models.ForeignKey(
-        Commodity, verbose_name=_("foreign commodity"), on_delete=models.PROTECT, blank=True, null=True, related_name="foreign_postings"
+        Commodity,
+        verbose_name=_("foreign commodity"),
+        default=_get_base_currency(),
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        related_name="foreign_postings",
     )
 
     is_balance_posting = models.BooleanField(_("is balance posting"), default=False)
@@ -200,13 +218,44 @@ class Posting(models.Model):
         verbose_name_plural = _("postings")
         ordering = ["transaction", "account"]
 
-    def save(self, *args, **kwargs) -> None:
-        if self.commodity != self.account.default_currency:
-            self.foreign_amount = self.amount
-            self.foreign_commodity = self.commodity
+    def clean(self) -> None:
+        super().clean()
 
-            self.amount = self.foreign_amount * self.foreign_commodity.convert_to(self.account.default_currency)
-            self.commodity = self.account.default_currency
+        if not self.account.id:
+            return
+
+        if self.commodity != self.account.default_currency:
+            if self.foreign_commodity != self.account.default_currency and (
+                self.foreign_commodity is None or self.foreign_commodity != self.account.default_currency
+            ):
+                raise ValidationError(
+                    {
+                        "commodity": _(
+                            "Either the commodity or the foreign commodity must be the equal to the account's default currency ({})"
+                        ).format(self.account.default_currency.code),
+                        "foreign_commodity": _(
+                            "Either the commodity or the foreign commodity must be the equal to the account's default currency ({})"
+                        ).format(self.account.default_currency.code),
+                    }
+                )
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+
+        if self.commodity != self.account.default_currency:
+            foreign_amount = self.amount
+            foreign_commodity = self.commodity
+
+            if self.foreign_amount == Decimal(0):
+                self.amount = foreign_amount * foreign_commodity.convert_to(self.account.default_currency)
+                self.commodity = self.account.default_currency
+
+            else:
+                self.amount = self.foreign_amount
+                self.commodity = self.foreign_commodity
+
+            self.foreign_amount = foreign_amount
+            self.foreign_commodity = foreign_commodity
 
         if self.amount == Decimal(0):
             self.is_balance_posting = True

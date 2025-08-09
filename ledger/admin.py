@@ -10,7 +10,7 @@ from .models import Bank, Account, Transaction, Posting
 class PostingInline(admin.TabularInline):
     model = Posting
     extra = 0
-    readonly_fields = ["foreign_amount", "foreign_commodity"]
+    # readonly_fields = ["foreign_amount", "foreign_commodity"]
 
 
 @admin.register(Bank)
@@ -68,7 +68,7 @@ class TransactionAdmin(admin.ModelAdmin):
     date_hierarchy = "date"
     ordering = ["-date"]
     fieldsets = [
-        ["GENERAL INFORMATION", {"fields": ["date", "description", "amounts"], "classes": ["wide"]}],
+        ["GENERAL INFORMATION", {"fields": ["date", "description"], "classes": ["wide"]}],
     ]
     inlines = [PostingInline]
 
